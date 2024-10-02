@@ -1,6 +1,6 @@
 use libaeron_driver_sys as aeron_driver;
 
-use std::ffi::{CStr};
+use std::ffi::CStr;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -98,8 +98,9 @@ fn print_aeron_config(context: *mut aeron_driver::aeron_driver_context_t) -> Res
         (
             "threading_mode",
             threading_mode_to_str(unsafe {
-                    aeron_driver::aeron_driver_context_get_threading_mode(context)
-                }).to_string(),
+                aeron_driver::aeron_driver_context_get_threading_mode(context)
+            })
+            .to_string(),
         ),
         (
             "dir_delete_on_start",
