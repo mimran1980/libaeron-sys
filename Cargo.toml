@@ -2,4 +2,5 @@
 members = [
     "libaeron-sys",
     "libaeron_driver-sys",
+    "aeron-rs-media-driver",
 ]

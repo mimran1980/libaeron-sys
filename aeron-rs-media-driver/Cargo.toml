@@ -1,0 +1,15 @@
+[package]
+name = "aeron-rs-media-driver"
+version = "1.46.5"
+authors = ["Mo Imran <mimran1980@gmail.com>"]
+repository = "https://https://github.com/mimran1980/libaeron-sys"
+documentation = "https://docs.rs/libaeron_driver-sys"
+description = "Rust bindings for the Aeron Media Driver"
+license = "Apache-2.0"
+edition = "2018"
+readme = "README.md"
+
+[dependencies]
+ctrlc = "3.4.5"
+
+libaeron_driver-sys = { path = "../libaeron_driver-sys"}
