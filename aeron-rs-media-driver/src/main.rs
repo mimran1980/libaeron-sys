@@ -82,11 +82,10 @@ fn threading_mode_to_str(mode: aeron_driver::aeron_threading_mode_t) -> &'static
 }
 
 fn print_aeron_config(context: *mut aeron_driver::aeron_driver_context_t) -> Result<()> {
-
     let config_entries = vec![
         ("dir", format!("{:?}", unsafe { CStr::from_ptr(aeron_driver::aeron_driver_context_get_dir(context)) })),
         ("dir_warn_if_exists", format!("{:?}", unsafe { aeron_driver::aeron_driver_context_get_dir_warn_if_exists(context) })),
-        ("threading_mode",format!("{}", threading_mode_to_str(unsafe { aeron_driver::aeron_driver_context_get_threading_mode(context) }))),
+        ("threading_mode", format!("{}", threading_mode_to_str(unsafe { aeron_driver::aeron_driver_context_get_threading_mode(context) }))),
         ("dir_delete_on_start", format!("{:?}", unsafe { aeron_driver::aeron_driver_context_get_dir_delete_on_start(context) })),
         ("dir_delete_on_shutdown", format!("{:?}", unsafe { aeron_driver::aeron_driver_context_get_dir_delete_on_shutdown(context) })),
         ("to_conductor_buffer_length", format!("{:?}", unsafe { aeron_driver::aeron_driver_context_get_to_conductor_buffer_length(context) })),
