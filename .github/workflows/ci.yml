@@ -18,9 +18,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        features: [default, static]
-#        rust-version: ["stable", "stable 6 months ago"]
-        rust-version: ["stable"]
+        features: [default, static]in
+        rust-version: ["stable", "stable 6 months ago"]
 
     env:
       feature-flags: ${{ matrix.features != 'default' && format('--features {0}', matrix.features) || '' }}
@@ -36,6 +35,11 @@ jobs:
         with:
           toolchain: ${{ matrix.rust-version }}
           components: clippy, rustfmt
+
+      # Only run this on Ubuntu
+      - name: Install dependencies on Ubuntu
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y uuid-dev
 
       - name: Check formatting
         run: cargo fmt --all -- --check
