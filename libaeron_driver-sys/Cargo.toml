@@ -6,7 +6,7 @@ repository = "https://github.com/bspeice/libaeron-sys"
 documentation = "https://docs.rs/libaeron_driver-sys"
 description = "Rust bindings for the Aeron Media Driver"
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 
 [dependencies]

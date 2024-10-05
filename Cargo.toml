@@ -4,3 +4,4 @@ members = [
     "libaeron_driver-sys",
     "aeron-rs-media-driver",
 ]
+resolver = "2"
