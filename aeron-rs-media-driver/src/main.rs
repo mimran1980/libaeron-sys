@@ -1,70 +1,147 @@
 use libaeron_driver_sys as aeron_driver;
 
 use std::ffi::CStr;
-use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 type Error = Box<dyn std::error::Error>;
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-fn main() -> Result<()> {
+use libaeron_driver_sys::aeron_driver_context_t;
+use std::any::type_name;
+use std::ptr;
+
+pub struct ManagedCResource<T> {
+    resource: *mut T,
+    cleanup: Box<dyn FnMut(*mut T) -> i32>,
+}
+
+impl<T> ManagedCResource<T> {
+    pub fn new(
+        init: impl FnOnce(*mut *mut T) -> i32,
+        cleanup: impl FnMut(*mut T) -> i32 + 'static,
+    ) -> Result<Self, i32> {
+        let mut resource: *mut T = ptr::null_mut();
+        let result = init(&mut resource);
+        if result < 0 {
+            return Err(result); // Return the error code
+        }
+
+        Ok(Self {
+            resource,
+            cleanup: Box::new(cleanup),
+        })
+    }
+
+    pub fn get(&self) -> *mut T {
+        self.resource
+    }
+}
+
+impl<T> Drop for ManagedCResource<T> {
+    fn drop(&mut self) {
+        let result = (self.cleanup)(self.resource);
+        if result < 0 {
+            eprintln!(
+                "Failed to close resource of type {} with error code {}",
+                type_name::<T>(),
+                result
+            );
+        } else {
+            println!(
+                "Closed resource of type {} with success code {}",
+                type_name::<T>(),
+                result
+            );
+        }
+    }
+}
+
+pub struct AeronContext {
+    resource: ManagedCResource<aeron_driver_context_t>,
+}
+
+impl AeronContext {
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let resource = ManagedCResource::new(
+            |ctx| unsafe { aeron_driver::aeron_driver_context_init(ctx) },
+            |ctx| unsafe { aeron_driver::aeron_driver_context_close(ctx) },
+        )
+        .map_err(|error_code| {
+            format!("failed to initialise aeron context error code {error_code}")
+        })?;
+
+        Ok(Self { resource })
+    }
+
+    // Add methods specific to AeronContext
+    pub fn print_config(&self) -> Result<(), Box<dyn std::error::Error>> {
+        print_aeron_config(self.resource.get())?;
+        Ok(())
+    }
+}
+
+pub struct AeronDriver {
+    resource: ManagedCResource<aeron_driver::aeron_driver_t>,
+}
+
+impl AeronDriver {
+    pub fn new(context: &AeronContext) -> Result<Self, Box<dyn std::error::Error>> {
+        let resource = ManagedCResource::new(
+            |driver| unsafe { aeron_driver::aeron_driver_init(driver, context.resource.get()) },
+            |driver| unsafe { aeron_driver::aeron_driver_close(driver) },
+        )
+        .map_err(|error_code| {
+            format!("failed to initialise aeron driver error code {error_code}")
+        })?;
+
+        Ok(Self { resource })
+    }
+
+    pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let result = unsafe { aeron_driver::aeron_driver_start(self.resource.get(), false) };
+        if result < 0 {
+            return Err(format!("failed to start aeron driver error code {result}").into());
+        }
+        Ok(())
+    }
+
+    // Add methods specific to AeronDriver
+    pub fn do_work(&self) {
+        while unsafe { aeron_driver::aeron_driver_main_do_work(self.resource.get()) } != 0 {
+            // busy spin
+        }
+    }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Flag to indicate when the application should stop (set on Ctrl+C)
     let running = Arc::new(AtomicBool::new(true));
     let running_clone = Arc::clone(&running);
+
     // Register signal handler for SIGINT (Ctrl+C)
     ctrlc::set_handler(move || {
         running_clone.store(false, Ordering::SeqCst);
     })?;
 
-    // Create the media driver context
-    let mut context: *mut aeron_driver::aeron_driver_context_t = ptr::null_mut();
+    // Create Aeron context
+    let aeron_context = AeronContext::new()?;
+    aeron_context.print_config()?;
 
-    // Initialize the media driver context
-    let result = unsafe { aeron_driver::aeron_driver_context_init(&mut context) };
-    if result < 0 {
-        return Err("Failed to initialize Aeron driver context".into());
-    }
+    // Create Aeron driver
+    let aeron_driver = AeronDriver::new(&aeron_context)?;
 
-    print_aeron_config(context)?;
-
-    // Create the media driver
-    let mut driver: *mut aeron_driver::aeron_driver_t = ptr::null_mut();
-    let result = unsafe { aeron_driver::aeron_driver_init(&mut driver, context) };
-    if result < 0 {
-        return Err("Failed to initialize Aeron driver".into());
-    }
-
-    // Start the media driver
-    let result = unsafe { aeron_driver::aeron_driver_start(driver, false) };
-    if result < 0 {
-        return Err("Failed to start Aeron driver".into());
-    }
-
+    // Start the Aeron driver
+    aeron_driver.start()?;
     println!("Aeron media driver started successfully. Press Ctrl+C to stop.");
 
     // Poll for work until Ctrl+C is pressed
     while running.load(Ordering::Acquire) {
-        while unsafe { aeron_driver::aeron_driver_main_do_work(driver) } != 0 {
-            // busy spin
-        }
+        aeron_driver.do_work();
     }
 
-    println!("Received signal to stop the media driver...");
-
-    // Clean up: stop and close the media driver
-    let result = unsafe { aeron_driver::aeron_driver_close(driver) };
-    if result < 0 {
-        return Err("Failed to close Aeron driver".into());
-    }
-
-    // Clean up the context
-    let result = unsafe { aeron_driver::aeron_driver_context_close(context) };
-    if result < 0 {
-        return Err("Failed to close Aeron driver context".into());
-    }
-
-    println!("Aeron media driver stopped successfully");
+    println!("Received signal to stop the media driver.");
+    println!("Aeron media driver stopped successfully.");
     Ok(())
 }
 
