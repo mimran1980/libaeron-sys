@@ -12,7 +12,6 @@ fn main() -> Result<()> {
     // Flag to indicate when the application should stop (set on Ctrl+C)
     let running = Arc::new(AtomicBool::new(true));
     let running_clone = Arc::clone(&running);
-
     // Register signal handler for SIGINT (Ctrl+C)
     ctrlc::set_handler(move || {
         running_clone.store(false, Ordering::SeqCst);
