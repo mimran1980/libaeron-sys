@@ -34,7 +34,7 @@ This project uses a fork of the `libaeron-sys` crate to ensure version compatibi
 
 ## License
 
-This project is licensed under the terms of the MIT license. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the terms of the MIT license. See the [LICENSE](../LICENSE) file for details.
 
 ## Acknowledgments
 

@@ -36,6 +36,8 @@ pub fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=bindings.h");
 
+    pkg_config::probe_library("uuid").unwrap();
+
     let aeron_path = canonicalize(Path::new("./aeron")).unwrap();
     let header_path = aeron_path.join("aeron-driver/src/main/c");
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());

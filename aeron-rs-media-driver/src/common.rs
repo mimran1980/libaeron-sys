@@ -17,7 +17,7 @@ impl<T> ManagedCResource<T> {
         let mut resource: *mut T = ptr::null_mut();
         let result = init(&mut resource);
         if result < 0 {
-            return Err(result); // Return the error code
+            return Err(result);
         }
 
         Ok(Self {
